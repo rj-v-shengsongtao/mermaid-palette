@@ -1,5 +1,11 @@
 # mermaid-palette
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.txt)
+[![WCAG](https://img.shields.io/badge/WCAG-2.1%20AA-2f9e44.svg)](refs/palette.md)
+[![Mermaid](https://img.shields.io/badge/Mermaid-diagrams-e8590c.svg)](https://mermaid.js.org/)
+[![Node](https://img.shields.io/badge/node-%3E%3D16-495057.svg)](scripts/check-contrast.mjs)
+[![Agent Skill](https://img.shields.io/badge/Agent%20Skill-Claude%20Code%20%7C%20Copilot-228be6.svg)](#安装)
+
 > **Mermaid diagrams that carry meaning in color** — a semantic palette with a WCAG contrast gate, so you stop eyeballing whether white text is readable on a colored node.
 
 你写完一张 mermaid 图，配色看起来挺鲜亮，白字也挺精神。
@@ -25,6 +31,63 @@
 
 蓝还是蓝，绿还是绿，红还是红——只是从"荧光"变成"可读"。
 **只降一档就够。** 一步压到 `#1864ab` 那种深色，等于把亮色带来的观感全压没了。
+
+---
+
+## 安装
+
+### 方式一：作为 Agent Skill 安装（推荐）
+
+克隆到你的 skills 目录，之后每次对话都会自动可被引用：
+
+```bash
+git clone https://github.com/rj-v-shengsongtao/mermaid-palette.git ~/.claude/skills/mermaid-palette
+```
+
+**Claude Code** 与 **VS Code Copilot Chat** 都从这里读取技能（Windows 下 `~` 即 `%USERPROFILE%`）。
+
+装完后直接说人话就能触发：
+
+> 帮我给这张流程图配色，别让白字看不清
+> 这个 fill/color 组合能读吗
+> 统一一下这个项目所有图的配色
+
+### 方式二：只拿色板，不用装
+
+不给 agent 用、只想自己抄色值？跳过安装，直接看
+[SKILL.md 的四档速查表](SKILL.md) 或 [refs/palette.md](refs/palette.md) 的 classDef 代码块复制即可。
+
+### 方式三：只用校验脚本
+
+脚本零依赖、纯 Node ESM，`node >= 16`：
+
+```bash
+# 临时用（不克隆）
+npx https://github.com/rj-v-shengsongtao/mermaid-palette/raw/main/scripts/check-contrast.mjs --palette
+
+# 或克隆后长期用（推荐，可挂进 CI）
+git clone https://github.com/rj-v-shengsongtao/mermaid-palette.git
+node mermaid-palette/scripts/check-contrast.mjs "#228be6" "#ffffff"
+```
+
+### 装到项目里（团队共享）
+
+想让整个团队自动遵守，把 skill 放进项目仓库，而不是只放个人目录：
+
+```bash
+mkdir -p .github/skills
+git clone https://github.com/rj-v-shengsongtao/mermaid-palette.git .github/skills/mermaid-palette
+```
+
+`.github/skills/` 是 VS Code Copilot 工作区级技能目录，跟随仓库走，新人克隆即生效。
+
+### 验证装好了
+
+```bash
+node ~/.claude/skills/mermaid-palette/scripts/check-contrast.mjs --palette
+```
+
+看到 `✅ 全部色板达标` 就对了。
 
 ---
 
