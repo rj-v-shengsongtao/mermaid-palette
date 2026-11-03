@@ -18,6 +18,10 @@
  *   退出码 —— 恒为 0（fail-open）。hook 报错绝不能卡住用户会话。
  *
  * 禁用：环境变量 MERMAID_PALETTE_HOOK_DISABLE=1 → 输出 {}，交给默认行为。
+ *
+ * 复用：本文件同时是模块。被 require 时只导出 RULES / detectEvent，不接管 stdin。
+ *       其它绘图类 hook 可以 require 本文件取规则正文，避免同一份配色规范存两处。
+ *       例：require('~/.claude/skills/mermaid-palette/scripts/inject-palette-rules.cjs').RULES
  */
 
 'use strict';
@@ -53,6 +57,9 @@ function detectEvent(raw) {
   return 'SessionStart';
 }
 
+// 被 require 时到此为止：只导出规则正文，不注册 hook 事件监听
+module.exports = { RULES, detectEvent };
+
 function emit() {
   if (emitted) return;
   emitted = true;
@@ -82,18 +89,21 @@ function emit() {
   }
 }
 
-// 宿主通常会关 stdin；1.5s 兜底防某些宿主不关管道，把会话卡到 timeoutSec
-const timer = setTimeout(emit, 1500);
+// 仅当直接执行（被 hook 调用）时才接管 stdin
+if (require.main === module) {
+  // 宿主通常会关 stdin；1.5s 兜底防某些宿主不关管道，把会话卡到 timeoutSec
+  var timer = setTimeout(emit, 1500);
 
-let buffer = '';
-process.stdin.setEncoding('utf8');
-process.stdin.on('data', (chunk) => {
-  buffer += chunk;
-});
-process.stdin.on('end', () => {
-  eventName = detectEvent(buffer);
-  emit();
-});
-process.stdin.on('error', emit);
-process.stdin.resume();
-process.on('uncaughtException', emit);
+  let buffer = '';
+  process.stdin.setEncoding('utf8');
+  process.stdin.on('data', (chunk) => {
+    buffer += chunk;
+  });
+  process.stdin.on('end', () => {
+    eventName = detectEvent(buffer);
+    emit();
+  });
+  process.stdin.on('error', emit);
+  process.stdin.resume();
+  process.on('uncaughtException', emit);
+}

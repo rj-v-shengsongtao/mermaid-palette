@@ -170,6 +170,23 @@ node -e "const{spawnSync}=require('child_process');const p=process.env.USERPROFI
 2. 删 `~/.copilot/hooks/mermaid-palette.json` → 只影响本 skill
 3. **别删整个 `~/.copilot/hooks` 目录** —— 里面可能还有别的 hook
 
+### 已有别的绘图 hook？
+
+**别挂两份。** 配色条款进两次上下文，多花 1KB，且措辞不同时模型会挑一个听。
+
+本脚本同时是模块，让对方的 hook `require` 它取规则正文即可零重复：
+
+```js
+try {
+  const { RULES } = require(os.homedir() + '/.claude/skills/mermaid-palette/scripts/inject-palette-rules.cjs');
+  return `通用绘图纪律...\n\n${RULES}`;   // 一次注入，两段内容
+} catch { return '通用绘图纪律...'; }
+```
+
+暂时不想改对方脚本，就在本 hook 配置里加 `"env": { "MERMAID_PALETTE_HOOK_DISABLE": "1" }` 静音。
+
+📖 共存方案与去重自检见 [refs/deploy-global.md §4.6](refs/deploy-global.md)。
+
 📖 完整协议（含排障表、Local/Copilot 契约差异、`chat.hookFilesLocations` 为什么做不了全局）见 [refs/deploy-global.md](refs/deploy-global.md)。
 
 ---

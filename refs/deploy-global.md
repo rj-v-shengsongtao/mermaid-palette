@@ -198,6 +198,68 @@ return 'SessionStart';
 
 **结论：全局部署靠"文件放到默认目录"，不靠改设置。**
 
+### 4.6 已有别的绘图 hook 时：不要挂两份
+
+如果机器上已经有另一个注入绘图规则的 hook（很常见——通用绘图纪律和配色规范往往分开写），
+**直接挂本 hook 会让配色条款进两次上下文**：多花 ~1KB/轮，且两段措辞不同时模型会挑一个听。
+
+三种处置，按推荐度排序：
+
+| 做法 | 代价 | 适用 |
+|---|---|---|
+| ⭐ **让对方的脚本 `require` 本 skill 取规则** | 零重复、单一事实源、改 skill 即全体生效 | 你能改对方脚本 |
+| **只挂对方那个**（它已内联配色） | 改 skill 不会同步到注入 | 对方已完整覆盖配色 |
+| **两个都挂 + 给本 hook 加 `env` 静音** | 保留文件但不注入 | 暂时不想删配置 |
+
+第一种的关键：本脚本**同时是模块**，被 `require` 时只导出文本，不接管 stdin。
+
+```js
+// 对方的 hook 脚本里
+try {
+  const { RULES } = require(os.homedir() +
+    '/.claude/skills/mermaid-palette/scripts/inject-palette-rules.cjs');
+  return `通用绘图纪律...\n\n${RULES}`;   // 一次注入，两段内容，零重复
+} catch {
+  return '通用绘图纪律...';                // 没装 skill 就不带配色段
+}
+```
+
+第三种用到的 `env` 字段是 hook 配置原生支持的（解析器里 `...typeof s.env=="object" && {env:s.env}`）：
+
+```json
+{ "type": "command", "command": "node \"...inject-palette-rules.cjs\"",
+  "env": { "MERMAID_PALETTE_HOOK_DISABLE": "1" }, "timeoutSec": 10 }
+```
+
+**自检有没有重复**：把所有 hook 都跑一遍，统计配色探针（`#4dabf7`，只在配色段出现）在**合计注入文本**里出现几次。1 次正常，≥2 重复。
+
+```bash
+node -e "
+const fs=require('fs'),os=require('os'),path=require('path'),{spawnSync}=require('child_process');
+const dir=path.join(os.homedir(),'.copilot','hooks'),scripts=new Set();
+for(const f of fs.readdirSync(dir).filter(x=>x.endsWith('.json'))){
+  let j; try{ j=JSON.parse(fs.readFileSync(path.join(dir,f),'utf8')); }catch{ continue; }
+  for(const arr of Object.values(j.hooks||{})){ if(!Array.isArray(arr)) continue;
+    for(const h of arr) for(const c of [h.command,h.windows,h.linux,h.osx]){
+      if(typeof c!=='string') continue;
+      const m=c.match(/node\s+\"?([^\"\s]+\.c?js)\"?/); if(m) scripts.add(m[1]);
+    } }
+}
+let total=0;
+for(const s of scripts){
+  if(!fs.existsSync(s)) continue;
+  const r=spawnSync(process.execPath,[s],{input:'{}',encoding:'utf8'});
+  let t=''; try{ t=JSON.parse(r.stdout).additionalContext||''; }catch{ t=r.stdout; }
+  const n=(t.match(/#4dabf7/g)||[]).length; total+=n;
+  console.log(path.basename(s),n);
+}
+console.log('total',total,total<=1?'OK':'⚠ 重复注入');
+"
+```
+
+> ⚠️ 必须 `JSON.parse` 后再数。脚本是双格式输出（顶层 + 嵌套两个 `additionalContext`），
+> 直接在原始 stdout 上计数会得到 2 倍，误判成重复。
+
 ---
 
 ## 5. Step 3：冗余层（重要项目再做）
@@ -268,6 +330,7 @@ MERMAID_PALETTE_HOOK_DISABLE=1 node <skill>/scripts/inject-palette-rules.cjs
 | 现象 | 原因 | 处置 |
 |---|---|---|
 | 规则被注入了两次 | 全局 + 工作区 `.github/hooks/` 各有一份 | 删工作区那份，只留全局。工作区副本可保留一个 `README.md` 说明迁移去向 |
+| 配色规则被注入了两次 | 另一个绘图 hook 也内联了配色条款 | 见 §4.6：让对方的脚本 `require` 本 skill 取 `RULES`，或给本 hook 加 `env` 静音 |
 | 新会话没反应 | 当前会话已启动，hook 不热重载 | 真的重开一个会话 / 重载窗口 |
 | 完全没有注入 | `chat.useHooks` 没开，或工作区在受限模式 | 让用户开启 + 信任工作区 |
 | 报 `Cannot find module` | JSON 里用了相对路径，或用户名写错 | 改成绝对路径，`node -v` 同机验证能跑到该文件 |
@@ -312,15 +375,17 @@ MERMAID_PALETTE_HOOK_DISABLE=1 node <skill>/scripts/inject-palette-rules.cjs
 
 ```text
 1. 问用户：要不要装全局 hook？（每轮 ~1.2KB 成本）
-2. git clone → ~/.claude/skills/mermaid-palette
-3. node ~/.claude/skills/mermaid-palette/scripts/check-contrast.mjs --palette   # 见"全部色板达标"
-4. 写 ~/.copilot/hooks/mermaid-palette.json（PascalCase 事件名 + 绝对路径）
-5. 跑 §6.1 验证：两行都 exit 0 / top true / nested 正确
-6. 让用户重开会话，按 §6.4 两条行为验收
+2. 先查是否已有别的绘图 hook（有 → 读 §4.6，别挂两份）
+3. git clone → ~/.claude/skills/mermaid-palette
+4. node ~/.claude/skills/mermaid-palette/scripts/check-contrast.mjs --palette   # 见"全部色板达标"
+5. 写 ~/.copilot/hooks/mermaid-palette.json（PascalCase 事件名 + 绝对路径）
+6. 跑 §6.1 验证：两行都 exit 0 / top true / nested 正确
+7. 让用户重开会话，按 §6.4 两条行为验收
 ```
 
-**四个最常见的坑，按出现频率排序：**
+**五个最常见的坑，按出现频率排序：**
 1. 在 JSON 里写了相对路径 → hook 的 cwd 是工作区根目录，必挂。
 2. 事件名写了 `subagentStart` → 不在归一化表里，**静默丢弃、永不触发、不报错**。用 `SubagentStart`。
 3. 全局和工作区各放一份 → 双重注入。删工作区那份。
-4. 试图用 `chat.hookFilesLocations` 配 `~/` 路径 → 解析器显式跳过，白费功夫。
+4. 已有别的绘图 hook 又挂本 hook → 配色条款进两次。读 §4.6，让单侧组合或静音。
+5. 试图用 `chat.hookFilesLocations` 配 `~/` 路径 → 解析器显式跳过，白费功夫。

@@ -146,12 +146,16 @@ node scripts/check-contrast.mjs --palette
 
 三层不互斥，推荐「skill + hook」，重要项目再加 `AGENTS.md`。
 
-**四个最容易踩的坑：**
+**五个最容易踩的坑：**
 
 1. **事件名写成 `subagentStart`** → 事件名白名单里只有 `SubagentStart`（PascalCase），小驼峰版本**被静默丢弃**：不报错、不警告、永不触发。全部事件名统一写 PascalCase 最省事。
 2. **在 hook JSON 里用相对路径** → hook 的 cwd 是工作区根目录，必挂。用绝对路径。
 3. **全局和工作区各放一份 hook** → 双重注入。删掉工作区那份。
-4. **想用 `chat.hookFilesLocations` 配 `~/` 路径做全局** → 解析器显式跳过 `~/`，只吃工作区相对路径。全局部署靠"把文件放进默认目录 `~/.copilot/hooks/`"，不靠改设置。
+4. **已有别的绘图 hook 又挂本 hook** → 配色条款进两次上下文。单侧组合就够了：让对方的脚本 `require` 本 skill 取 `RULES`，或给本 hook 配 `"env": {"MERMAID_PALETTE_HOOK_DISABLE": "1"}` 静音。详见 refs/deploy-global.md §4.6。
+5. **想用 `chat.hookFilesLocations` 配 `~/` 路径做全局** → 解析器显式跳过 `~/`，只吃工作区相对路径。全局部署靠"把文件放进默认目录 `~/.copilot/hooks/`"，不靠改设置。
 
 零依赖注入脚本已随本仓库提供：[scripts/inject-palette-rules.cjs](scripts/inject-palette-rules.cjs)
 （一次输出同时满足 Copilot harness 的 `additionalContext` 与 Local harness 的 `hookSpecificOutput.additionalContext`，两套 harness 共用一份）。
+
+该脚本**同时是模块**：被 `require` 时只导出 `RULES` / `detectEvent`，不接管 stdin。所以别人的绘图 hook 可以直接
+`require(...).RULES` 复用同一份配色正文——配色规范只存一处，不会两套措辞打架。
