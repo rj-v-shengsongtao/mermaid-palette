@@ -1,6 +1,6 @@
 ---
 name: mermaid-palette
-description: Mermaid 图表配色规范与 WCAG 对比度门禁。给出经过实测的可复制色板（四档）、语义映射、时序图混档例外的正确处理，以及"要不要上色、上到什么程度"的决策判据。当需要为 mermaid 流程图、时序图、状态图配色；判断某个 fill+color 组合是否可读；遇到"白字看不清""颜色太刺眼""深浅不一"；或想统一一个项目里所有图的配色语言时使用。含可运行的对比度校验脚本。
+description: Mermaid 图表配色规范与 WCAG 对比度门禁。给出经过实测的可复制色板（四档）、语义映射、时序图混档例外的正确处理，以及"要不要上色、上到什么程度"的决策判据。当需要为 mermaid 流程图、时序图、状态图配色；判断某个 fill+color 组合是否可读；遇到"白字看不清""颜色太刺眼""深浅不一"；或想统一一个项目里所有图的配色语言时使用。也用于把本规范部署为全局约束——"每个项目都要遵守""让它必生效""以后自动遵守配色规范""装个 hook 强制"等诉求走 refs/deploy-global.md（skill 层 + hook 层 + 冗余层三层协议）。含可运行的对比度校验脚本与规则注入脚本。
 license: MIT
 ---
 
@@ -131,3 +131,27 @@ node scripts/check-contrast.mjs --palette
 ```
 
 退出码：`0` 全过 / `1` 有低于门禁的 / `2` 用法错误。
+
+## 部署：让每个工作区都自动遵守
+
+> 用户说"每个项目都要遵守""让它必生效""装个 hook 强制"时 → 读 [refs/deploy-global.md](refs/deploy-global.md)。
+
+**不要直接开装。** 先分清是哪种失效：
+
+| 现象 | 该做 |
+|---|---|
+| 模型根本不知道有这个 skill | 放对 skill 目录 + 确认 description 有绘图触发词 |
+| 知道，但画图时想不起来读 | 装 hook，每轮注入规则（**有成本，先问用户**） |
+| 读过又忘 | 项目 `AGENTS.md` 里写一行硬清单，**路径用绝对路径** |
+
+三层不互斥，推荐「skill + hook」，重要项目再加 `AGENTS.md`。
+
+**四个最容易踩的坑：**
+
+1. **事件名写成 `subagentStart`** → 事件名白名单里只有 `SubagentStart`（PascalCase），小驼峰版本**被静默丢弃**：不报错、不警告、永不触发。全部事件名统一写 PascalCase 最省事。
+2. **在 hook JSON 里用相对路径** → hook 的 cwd 是工作区根目录，必挂。用绝对路径。
+3. **全局和工作区各放一份 hook** → 双重注入。删掉工作区那份。
+4. **想用 `chat.hookFilesLocations` 配 `~/` 路径做全局** → 解析器显式跳过 `~/`，只吃工作区相对路径。全局部署靠"把文件放进默认目录 `~/.copilot/hooks/`"，不靠改设置。
+
+零依赖注入脚本已随本仓库提供：[scripts/inject-palette-rules.cjs](scripts/inject-palette-rules.cjs)
+（一次输出同时满足 Copilot harness 的 `additionalContext` 与 Local harness 的 `hookSpecificOutput.additionalContext`，两套 harness 共用一份）。

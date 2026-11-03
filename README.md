@@ -91,6 +91,89 @@ node ~/.claude/skills/mermaid-palette/scripts/check-contrast.mjs --palette
 
 ---
 
+## 强制：让每个项目都自动遵守
+
+装好 skill 只是「能被发现」。**靠的是 description 匹配触发词——会漏。**
+长会话里上下文一稀释，模型照样画出一张 2.48 的白字图。
+
+想让它**每轮无条件进上下文**，加一个用户级 hook 即可。
+
+### 一步装完
+
+新建 `~/.copilot/hooks/mermaid-palette.json`（Windows 下 `~` 即 `%USERPROFILE%`）：
+
+```json
+{
+  "version": 1,
+  "hooks": {
+    "SessionStart": [
+      { "type": "command", "command": "node \"C:/Users/<你的用户名>/.claude/skills/mermaid-palette/scripts/inject-palette-rules.cjs\"", "timeoutSec": 10 }
+    ],
+    "SubagentStart": [
+      { "type": "command", "command": "node \"C:/Users/<你的用户名>/.claude/skills/mermaid-palette/scripts/inject-palette-rules.cjs\"", "timeoutSec": 10 }
+    ]
+  }
+}
+```
+
+四件事必须做对，否则静默失效：
+
+| 要点 | 原因 |
+|---|---|
+| **事件名写 PascalCase** | 写成 `subagentStart` 会被**静默丢弃**——不报错、不警告、永不触发 |
+| **绝对路径** | hook 的 cwd 是工作区根目录，相对路径必挂 |
+| **两个事件都配** | 只配 `SessionStart`，子 agent 拿不到规则 |
+| **路径转义** | 反斜杠要写 `\\`；或像上面一样整条改用 `/`，免转义（Node 在 Windows 上认） |
+
+> 📌 **`subagentStart` 不存在。** VS Code 的事件名白名单里只有 `SubagentStart`（PascalCase）。
+> 小驼峰版本只到 `subagentStop`，没有 start。这条坑不报错，只静静失效——不信邪可以自查一遍。
+
+前置条件只有一个：VS Code 设置里 `"chat.useHooks": true`（Preview 功能，默认关）。
+`chat.useClaudeHooks` **不用开**——本 hook 走的是 `~/.copilot/hooks/`，另一条通路。
+
+### 为什么一个 json 能同时喂两套 harness
+
+VS Code 现在有两套 agent harness，事件名风格不同：
+
+| harness | 原生事件名 | 读哪个输出字段 |
+|---|---|---|
+| Copilot | `sessionStart` | 顶层 `additionalContext` |
+| Local | `SessionStart` | `hookSpecificOutput.additionalContext` |
+
+`inject-palette-rules.cjs` **一次输出同时写两个字段**，各自读自己认识的，互不干扰：
+
+```js
+process.stdout.write(JSON.stringify({
+  additionalContext: RULES,                         // Copilot
+  hookSpecificOutput: { hookEventName, additionalContext: RULES },  // Local
+}));
+```
+
+所以**不用问自己用哪个 harness，也不用装两份**。`~/.copilot/hooks/` 是两套 harness 共同的默认来源目录。
+
+### 验证
+
+```bash
+node -e "const{spawnSync}=require('child_process');const p=process.env.USERPROFILE||process.env.HOME;const s=p+'/.claude/skills/mermaid-palette/scripts/inject-palette-rules.cjs';[['SessionStart',{sessionId:'t'}],['SubagentStart',{hook_event_name:'SubagentStart'}]].forEach(([e,i])=>{const r=spawnSync(process.execPath,[s],{input:JSON.stringify(i),encoding:'utf8'});const j=JSON.parse(r.stdout);console.log(e,'exit',r.status,'top',!!j.additionalContext,'nested',j.hookSpecificOutput&&j.hookSpecificOutput.hookEventName)})"
+```
+
+两行都是 `exit 0  top true  nested <对应事件名>` → 成功。
+然后**重开一个会话**（hook 不热重载），让它画一张带分支的图，看是否默认用了 `#228be6/#2f9e44/#f03e3e` + 白字。
+
+> ⚠️ 别用 PowerShell 管道喂含中文的 JSON 测试，编码会被破坏，看起来像脚本坏了。用上面的 `spawnSync`。
+
+### 成本与卸载
+
+每轮约 **1.2KB** 上下文。不想要了就按顺序试：
+
+1. 环境变量 `MERMAID_PALETTE_HOOK_DISABLE=1` → 脚本输出 `{}`，配置保留
+2. 删 `~/.copilot/hooks/mermaid-palette.json` → 只影响本 skill
+3. **别删整个 `~/.copilot/hooks` 目录** —— 里面可能还有别的 hook
+
+📖 完整协议（含排障表、Local/Copilot 契约差异、`chat.hookFilesLocations` 为什么做不了全局）见 [refs/deploy-global.md](refs/deploy-global.md)。
+
+---
+
 ## 快速上手
 
 默认档（B：色相下沉 + 白字）直接复制：
@@ -218,12 +301,14 @@ Mermaid 自带 `themeVariables`，但主题只给一套**默认**，不告诉你
 
 ```
 mermaid-palette/
-├── SKILL.md                 三条硬规则 · 决策速查 · 自检清单
+├── SKILL.md                      三条硬规则 · 决策速查 · 自检清单 · 部署速查
 ├── refs/
-│   ├── color-decision.md    要不要上色、上多少 · 四条纪律 · 三个反模式
-│   └── palette.md           四档完整色值 · 门禁公式 · 语义映射 · 混档例外
+│   ├── color-decision.md         要不要上色、上多少 · 四条纪律 · 三个反模式
+│   ├── palette.md                四档完整色值 · 门禁公式 · 语义映射 · 混档例外
+│   └── deploy-global.md          全局部署协议（面向 AI）· 排障表 · 卸载 · 能力边界
 └── scripts/
-    └── check-contrast.mjs   WCAG 对比度校验（零依赖）
+    ├── check-contrast.mjs        WCAG 对比度校验（零依赖）
+    └── inject-palette-rules.cjs  hook 规则注入（双 harness 兼容，fail-open）
 ```
 
 ## License
