@@ -1,0 +1,107 @@
+SKILL.md
+  s_be4981b439511b::t_d7d2a54396dd97 149,151-154
+  s_be4981b439511b::t_c7a3d6c331297c 3
+  s_be4981b439511b::t_c7ba14b29d57df 134-148,150,155-157
+refs/deploy-global.md
+  s_be4981b439511b::t_37c76a52abf5f5 85-91,262-326
+  s_be4981b439511b::t_29918801b25fc0 113-190
+  s_be4981b439511b::t_41a8509493363b 1-84,92-112,191-261
+README.md
+  s_be4981b439511b::t_d7d2a54396dd97 109-110,112-113,119,123,125-126,128-130,138
+  s_be4981b439511b::t_41a8509493363b 94-108,111,114-118,120-122,124,127,131-137,139-176,304,306-308,310-311
+---
+{
+  "schema_version": "authorship/3.1.0",
+  "git_ai_version": "2.2.55",
+  "base_commit_sha": "fc5847cb18bd37b9aa67949acf75b6b4aaecf72d",
+  "prompts": {
+    "s_be4981b439511b::t_29918801b25fc0": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "50375b97-80d0-41ce-a18b-fc783da31de3",
+        "model": "customendpoint/专属/origin-deepseek-v4-1-flash"
+      },
+      "human_author": "v-shengsongtao <v-shengsongtao@ruijie.com.cn>",
+      "messages": [],
+      "total_additions": 175,
+      "total_deletions": 41,
+      "accepted_lines": 38,
+      "overriden_lines": 0
+    },
+    "s_be4981b439511b::t_37c76a52abf5f5": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "50375b97-80d0-41ce-a18b-fc783da31de3",
+        "model": "customendpoint/专属/origin-deepseek-v4-1-flash"
+      },
+      "human_author": "v-shengsongtao <v-shengsongtao@ruijie.com.cn>",
+      "messages": [],
+      "total_additions": 175,
+      "total_deletions": 41,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    },
+    "s_be4981b439511b::t_41a8509493363b": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "50375b97-80d0-41ce-a18b-fc783da31de3",
+        "model": "customendpoint/专属/origin-deepseek-v4-1-flash"
+      },
+      "human_author": "v-shengsongtao <v-shengsongtao@ruijie.com.cn>",
+      "messages": [],
+      "total_additions": 175,
+      "total_deletions": 41,
+      "accepted_lines": 77,
+      "overriden_lines": 0
+    },
+    "s_be4981b439511b::t_c7a3d6c331297c": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "50375b97-80d0-41ce-a18b-fc783da31de3",
+        "model": "customendpoint/专属/origin-deepseek-v4-1-flash"
+      },
+      "human_author": "v-shengsongtao <v-shengsongtao@ruijie.com.cn>",
+      "messages": [],
+      "total_additions": 175,
+      "total_deletions": 41,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "s_be4981b439511b::t_c7ba14b29d57df": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "50375b97-80d0-41ce-a18b-fc783da31de3",
+        "model": "customendpoint/专属/origin-deepseek-v4-1-flash"
+      },
+      "human_author": "v-shengsongtao <v-shengsongtao@ruijie.com.cn>",
+      "messages": [],
+      "total_additions": 175,
+      "total_deletions": 41,
+      "accepted_lines": 19,
+      "overriden_lines": 0
+    },
+    "s_be4981b439511b::t_d7d2a54396dd97": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "50375b97-80d0-41ce-a18b-fc783da31de3",
+        "model": "customendpoint/专属/origin-deepseek-v4-1-flash"
+      },
+      "human_author": "v-shengsongtao <v-shengsongtao@ruijie.com.cn>",
+      "messages": [],
+      "total_additions": 175,
+      "total_deletions": 41,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    }
+  },
+  "sessions": {
+    "s_be4981b439511b": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "50375b97-80d0-41ce-a18b-fc783da31de3",
+        "model": "customendpoint/专属/origin-deepseek-v4-1-flash"
+      },
+      "human_author": "v-shengsongtao <v-shengsongtao@ruijie.com.cn>"
+    }
+  }
+}
